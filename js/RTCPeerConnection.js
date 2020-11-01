@@ -3,15 +3,13 @@
  */
 module.exports = RTCPeerConnection;
 
-
 /**
  * Dependencies.
  */
-var
-	debug = require('debug')('iosrtc:RTCPeerConnection'),
+var debug = require('debug')('iosrtc:RTCPeerConnection'),
 	debugerror = require('debug')('iosrtc:ERROR:RTCPeerConnection'),
 	exec = require('cordova/exec'),
-	randomNumber = require('random-number').generator({min: 10000, max: 99999, integer: true}),
+	randomNumber = require('random-number').generator({ min: 10000, max: 99999, integer: true }),
 	EventTarget = require('./EventTarget'),
 	RTCSessionDescription = require('./RTCSessionDescription'),
 	RTCIceCandidate = require('./RTCIceCandidate'),
@@ -52,7 +50,11 @@ function RTCPeerConnection(pcConfig, pcConstraints) {
 	// NotSupportedError: The adapter.js addTrack, addStream polyfill only supports a single stream which is associated with the specified track.
 	Object.defineProperty(this, 'addTrack', RTCPeerConnection.prototype_descriptor.addTrack);
 	Object.defineProperty(this, 'addStream', RTCPeerConnection.prototype_descriptor.addStream);
-	Object.defineProperty(this, 'getLocalStreams', RTCPeerConnection.prototype_descriptor.getLocalStreams);
+	Object.defineProperty(
+		this,
+		'getLocalStreams',
+		RTCPeerConnection.prototype_descriptor.getLocalStreams
+	);
 
 	// Public atributes.
 	this._localDescription = null;
@@ -66,59 +68,65 @@ function RTCPeerConnection(pcConfig, pcConstraints) {
 	this.pcId = randomNumber();
 	this.localStreams = {};
 	this.remoteStreams = {};
+	this.localTracks = {};
+	this.remoteTracks = {};
 
 	function onResultOK(data) {
 		onEvent.call(self, data);
 	}
 
-	exec(onResultOK, null, 'iosrtcPlugin', 'new_RTCPeerConnection', [this.pcId, this.pcConfig, pcConstraints]);
+	exec(onResultOK, null, 'iosrtcPlugin', 'new_RTCPeerConnection', [
+		this.pcId,
+		this.pcConfig,
+		pcConstraints
+	]);
 }
 
 RTCPeerConnection.prototype = Object.create(EventTarget.prototype);
 RTCPeerConnection.prototype.constructor = RTCPeerConnection;
 
 Object.defineProperties(RTCPeerConnection.prototype, {
-	'localDescription': {
+	localDescription: {
 		// Fix webrtc-adapter TypeError: Attempting to change the getter of an unconfigurable property.
 		configurable: true,
-		get: function() {
+		get: function () {
 			return this._localDescription;
 		}
 	},
-	'connectionState': {
-		get: function() {
+	connectionState: {
+		get: function () {
 			return this.iceConnectionState;
 		}
 	},
-	'onicecandidate': {
+	onicecandidate: {
 		// Fix webrtc-adapter TypeError: Attempting to change the getter of an unconfigurable property.
 		configurable: true,
 		set: function (callback) {
 			return this.addEventListener('icecandidate', callback);
 		}
 	},
-	'onaddstream': {
+	onaddstream: {
 		// Fix webrtc-adapter TypeError: Attempting to change the getter of an unconfigurable property.
 		configurable: true,
 		set: function (callback) {
 			return this.addEventListener('addstream', callback);
 		}
 	},
-	'ontrack': {
+	ontrack: {
 		// Fix webrtc-adapter TypeError: Attempting to change the getter of an unconfigurable property.
 		configurable: true,
 		set: function (callback) {
 			return this.addEventListener('track', callback);
 		}
 	},
-	'oniceconnectionstatechange': {
+	oniceconnectionstatechange: {
 		// Fix webrtc-adapter TypeError: Attempting to change the getter of an unconfigurable property.
 		configurable: true,
 		set: function (callback) {
 			return this.addEventListener('iceconnectionstatechange', callback);
 		}
 	},
-	'onnegotiationneeded': {
+	onnegotiationneeded: {
 		// Fix webrtc-adapter TypeError: Attempting to change the getter of an unconfigurable property.
 		configurable: true,
 		set: function (callback) {
@@ -128,7 +136,6 @@ Object.defineProperties(RTCPeerConnection.prototype, {
 });
 
 RTCPeerConnection.prototype.createOffer = function (options) {
-
 	// Detect callback usage to assist 5.0.1 to 5.0.2 migration
 	// TODO remove on 6.0.0
 	Errors.detectDeprecatedCallbaksUsage('RTCPeerConnection.prototype.createOffer', arguments);
@@ -162,13 +169,14 @@ RTCPeerConnection.prototype.createOffer = function (options) {
 			reject(new global.DOMException(error));
 		}
 
-		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_createOffer', [self.pcId, options]);
+		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_createOffer', [
+			self.pcId,
+			options
+		]);
 	});
 };
 
-
 RTCPeerConnection.prototype.createAnswer = function (options) {
-
 	// Detect callback usage to assist 5.0.1 to 5.0.2 migration
 	// TODO remove on 6.0.0
 	Errors.detectDeprecatedCallbaksUsage('RTCPeerConnection.prototype.createAnswer', arguments);
@@ -202,15 +210,20 @@ RTCPeerConnection.prototype.createAnswer = function (options) {
 			reject(new global.DOMException(error));
 		}
 
-		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_createAnswer', [self.pcId, options]);
+		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_createAnswer', [
+			self.pcId,
+			options
+		]);
 	});
 };
 
 RTCPeerConnection.prototype.setLocalDescription = function (desc) {
-
 	// Detect callback usage to assist 5.0.1 to 5.0.2 migration
 	// TODO remove on 6.0.0
-	Errors.detectDeprecatedCallbaksUsage('RTCPeerConnection.prototype.setLocalDescription', arguments);
+	Errors.detectDeprecatedCallbaksUsage(
+		'RTCPeerConnection.prototype.setLocalDescription',
+		arguments
+	);
 
 	var self = this;
 
@@ -248,18 +261,25 @@ RTCPeerConnection.prototype.setLocalDescription = function (desc) {
 			}
 
 			debugerror('setLocalDescription() | failure: %s', error);
-			reject(new Errors.InvalidSessionDescriptionError('setLocalDescription() failed: ' + error));
+			reject(
+				new Errors.InvalidSessionDescriptionError('setLocalDescription() failed: ' + error)
+			);
 		}
 
-		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_setLocalDescription', [self.pcId, desc]);
+		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_setLocalDescription', [
+			self.pcId,
+			desc
+		]);
 	});
 };
 
 RTCPeerConnection.prototype.setRemoteDescription = function (desc) {
-
 	// Detect callback usage to assist 5.0.1 to 5.0.2 migration
 	// TODO remove on 6.0.0
-	Errors.detectDeprecatedCallbaksUsage('RTCPeerConnection.prototype.setRemoteDescription', arguments);
+	Errors.detectDeprecatedCallbaksUsage(
+		'RTCPeerConnection.prototype.setRemoteDescription',
+		arguments
+	);
 
 	var self = this;
 
@@ -299,15 +319,19 @@ RTCPeerConnection.prototype.setRemoteDescription = function (desc) {
 			}
 
 			debugerror('setRemoteDescription() | failure: %s', error);
-			reject(new Errors.InvalidSessionDescriptionError('setRemoteDescription() failed: ' + error));
+			reject(
+				new Errors.InvalidSessionDescriptionError('setRemoteDescription() failed: ' + error)
+			);
 		}
 
-		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_setRemoteDescription', [self.pcId, desc]);
+		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_setRemoteDescription', [
+			self.pcId,
+			desc
+		]);
 	});
 };
 
 RTCPeerConnection.prototype.addIceCandidate = function (candidate) {
-
 	// Detect callback usage to assist 5.0.1 to 5.0.2 migration
 	// TODO remove on 6.0.0
 	Errors.detectDeprecatedCallbaksUsage('RTCPeerConnection.prototype.addIceCandidate', arguments);
@@ -324,7 +348,11 @@ RTCPeerConnection.prototype.addIceCandidate = function (candidate) {
 
 	if (typeof candidate !== 'object') {
 		return new Promise(function (resolve, reject) {
-			reject(new global.DOMException('addIceCandidate() must be called with a RTCIceCandidate instance or RTCIceCandidateInit object as argument'));
+			reject(
+				new global.DOMException(
+					'addIceCandidate() must be called with a RTCIceCandidate instance or RTCIceCandidateInit object as argument'
+				)
+			);
 		});
 	}
 
@@ -354,7 +382,10 @@ RTCPeerConnection.prototype.addIceCandidate = function (candidate) {
 			reject(new global.DOMException('addIceCandidate() failed'));
 		}
 
-		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_addIceCandidate', [self.pcId, candidate]);
+		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_addIceCandidate', [
+			self.pcId,
+			candidate
+		]);
 	});
 };
 
@@ -380,7 +411,6 @@ RTCPeerConnection.prototype.getLocalStreams = function () {
 	return streams;
 };
 
-
 RTCPeerConnection.prototype.getRemoteStreams = function () {
 	debug('getRemoteStreams()');
 	deprecateWarning('getRemoteStreams', 'getReceivers');
@@ -398,34 +428,38 @@ RTCPeerConnection.prototype.getRemoteStreams = function () {
 };
 
 RTCPeerConnection.prototype.getReceivers = function () {
-	var tracks = [],
+	var self = this,
+		tracks = [],
 		id;
 
-	for (id in this.remoteStreams) {
-		if (this.remoteStreams.hasOwnProperty(id)) {
-			tracks = tracks.concat(this.remoteStreams[id].getTracks());
+	for (id in this.remoteTracks) {
+		if (this.remoteTracks.hasOwnProperty(id)) {
+			tracks.push(this.remoteTracks[id]);
 		}
 	}
 
 	return tracks.map(function (track) {
 		return new RTCRtpReceiver({
+			pc: self,
 			track: track
 		});
 	});
 };
 
 RTCPeerConnection.prototype.getSenders = function () {
-	var tracks = [],
+	var self = this,
+		tracks = [],
 		id;
 
-	for (id in this.localStreams) {
-		if (this.localStreams.hasOwnProperty(id)) {
-			tracks = tracks.concat(this.localStreams[id].getTracks());
+	for (id in this.localTracks) {
+		if (this.localTracks.hasOwnProperty(id)) {
+			tracks.push(this.localTracks[id]);
 		}
 	}
 
 	return tracks.map(function (track) {
 		return new RTCRtpSender({
+			pc: self,
 			track: track
 		});
 	});
@@ -435,20 +469,23 @@ RTCPeerConnection.prototype.getTransceivers = function () {
 	var transceivers = [];
 
 	this.getReceivers().map(function (receiver) {
-		transceivers.push(new RTCRtpTransceiver({
-			receiver: receiver
-		}));
+		transceivers.push(
+			new RTCRtpTransceiver({
+				receiver: receiver
+			})
+		);
 	});
 
 	this.getSenders().map(function (sender) {
-		transceivers.push(new RTCRtpTransceiver({
-			sender: sender
-		}));
+		transceivers.push(
+			new RTCRtpTransceiver({
+				sender: sender
+			})
+		);
 	});
 
 	return transceivers;
 };
-
 
 RTCPeerConnection.prototype.addTrack = function (track, stream) {
 	var id;
@@ -480,7 +517,11 @@ RTCPeerConnection.prototype.addTrack = function (track, stream) {
 			if (!stream || (stream && stream.id === id)) {
 				stream = this.localStreams[id];
 				stream.addTrack(track);
-				exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_addTrack', [this.pcId, track.id, id]);
+				exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_addTrack', [
+					this.pcId,
+					track.id,
+					id
+				]);
 				break;
 			}
 		}
@@ -490,17 +531,16 @@ RTCPeerConnection.prototype.addTrack = function (track, stream) {
 	if (!stream) {
 		exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_addTrack', [this.pcId, track.id, null]);
 	}
-	
+
+	this.localTracks[track.id] = track;
+
 	return new RTCRtpSender({
 		track: track
 	});
 };
 
 RTCPeerConnection.prototype.removeTrack = function (sender) {
-	var id,
-		track,
-		stream,
-		hasTrack;
+	var id, track, stream, hasTrack;
 
 	if (!(sender instanceof RTCRtpSender)) {
 		throw new Error('removeTrack() must be called with a RTCRtpSender instance as argument');
@@ -515,14 +555,34 @@ RTCPeerConnection.prototype.removeTrack = function (sender) {
 	for (id in this.localStreams) {
 		if (this.localStreams.hasOwnProperty(id)) {
 			// Check if track is belong to stream
-			hasTrack = (this.localStreams[id].getTracks().filter(matchLocalTrack).length > 0);
+			hasTrack = this.localStreams[id].getTracks().filter(matchLocalTrack).length > 0;
 
 			if (hasTrack) {
 				stream = this.localStreams[id];
 				stream.removeTrack(track);
-
-				exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_removeTrack', [this.pcId, track.id, stream.id]);
+				exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_removeTrack', [
+					this.pcId,
+					track.id,
+					stream.id
+				]);
+				delete this.localTracks[track.id];
 				break;
+			}
+		}
+	}
+
+	// No Stream matched remove track without stream
+	if (!stream) {
+		for (id in this.localTracks) {
+			if (this.localTracks.hasOwnProperty(id)) {
+				if (track.id === id) {
+					exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_removeTrack', [
+						this.pcId,
+						track.id,
+						null
+					]);
+					delete this.localTracks[track.id];
+				}
 			}
 		}
 	}
@@ -534,8 +594,9 @@ RTCPeerConnection.prototype.getStreamById = function (id) {
 	return this.localStreams[id] || this.remoteStreams[id] || null;
 };
 
-
 RTCPeerConnection.prototype.addStream = function (stream) {
+	var self = this;
+
 	if (isClosed.call(this)) {
 		throw new Errors.InvalidStateError('peerconnection is closed');
 	}
@@ -553,11 +614,19 @@ RTCPeerConnection.prototype.addStream = function (stream) {
 
 	this.localStreams[stream.id] = stream;
 
+	stream.getTracks().forEach(function (track) {
+		self.localTracks[track.id] = track;
+		track.addEventListener('ended', function () {
+			delete self.localTracks[track.id];
+		});
+	});
+
 	exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_addStream', [this.pcId, stream.id]);
 };
 
-
 RTCPeerConnection.prototype.removeStream = function (stream) {
+	var self = this;
+
 	if (isClosed.call(this)) {
 		throw new Errors.InvalidStateError('peerconnection is closed');
 	}
@@ -575,9 +644,12 @@ RTCPeerConnection.prototype.removeStream = function (stream) {
 
 	delete this.localStreams[stream.id];
 
+	stream.getTracks().forEach(function (track) {
+		delete self.localTracks[track.id];
+	});
+
 	exec(null, null, 'iosrtcPlugin', 'RTCPeerConnection_removeStream', [this.pcId, stream.id]);
 };
-
 
 RTCPeerConnection.prototype.createDataChannel = function (label, options) {
 	if (isClosed.call(this)) {
@@ -588,7 +660,6 @@ RTCPeerConnection.prototype.createDataChannel = function (label, options) {
 
 	return new RTCDataChannel(this, label, options);
 };
-
 
 RTCPeerConnection.prototype.createDTMFSender = function (track) {
 	if (isClosed.call(this)) {
@@ -601,7 +672,6 @@ RTCPeerConnection.prototype.createDTMFSender = function (track) {
 };
 
 RTCPeerConnection.prototype.getStats = function (selector) {
-
 	// Detect callback usage to assist 5.0.1 to 5.0.2 migration
 	// TODO remove on 6.0.0
 	Errors.detectDeprecatedCallbaksUsage('RTCPeerConnection.prototype.getStats', arguments);
@@ -609,7 +679,9 @@ RTCPeerConnection.prototype.getStats = function (selector) {
 	var self = this;
 
 	if (selector && !(selector instanceof MediaStreamTrack)) {
-		throw new Error('getStats() must be called with null or a valid MediaStreamTrack instance as argument');
+		throw new Error(
+			'getStats() must be called with null or a valid MediaStreamTrack instance as argument'
+		);
 	}
 
 	if (isClosed.call(this)) {
@@ -640,7 +712,10 @@ RTCPeerConnection.prototype.getStats = function (selector) {
 			reject(new global.DOMException(error));
 		}
 
-		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_getStats', [self.pcId, selector ? selector.id : null]);
+		exec(onResultOK, onResultError, 'iosrtcPlugin', 'RTCPeerConnection_getStats', [
+			self.pcId,
+			selector ? selector.id : null
+		]);
 	});
 };
 
@@ -655,7 +730,9 @@ RTCPeerConnection.prototype.close = function () {
 };
 
 // Save current RTCPeerConnection.prototype
-RTCPeerConnection.prototype_descriptor = Object.getOwnPropertyDescriptors(RTCPeerConnection.prototype);
+RTCPeerConnection.prototype_descriptor = Object.getOwnPropertyDescriptors(
+	RTCPeerConnection.prototype
+);
 
 /**
  * Private API.
@@ -668,7 +745,9 @@ function fixPcConfig(pcConfig) {
 	}
 
 	var iceServers = pcConfig.iceServers,
-		i, len, iceServer;
+		i,
+		len,
+		iceServer;
 
 	if (!Array.isArray(iceServers)) {
 		pcConfig.iceServers = [];
@@ -691,11 +770,9 @@ function fixPcConfig(pcConfig) {
 	return pcConfig;
 }
 
-
 function isClosed() {
 	return this.signalingState === 'closed';
 }
-
 
 function onEvent(data) {
 	var type = data.type,
@@ -704,7 +781,7 @@ function onEvent(data) {
 		dataChannel,
 		id;
 
-	Object.defineProperty(event, 'target', {value: self, enumerable: true});
+	Object.defineProperty(event, 'target', { value: self, enumerable: true });
 
 	debug('onEvent() | [type:%s, data:%o]', type, data);
 
@@ -749,8 +826,8 @@ function onEvent(data) {
 			break;
 
 		case 'track':
-			event.track = new MediaStreamTrack(data.track);
-			event.receiver = new RTCRtpReceiver({ track: event.track });
+			var track = (event.track = new MediaStreamTrack(data.track));
+			event.receiver = new RTCRtpReceiver({ track: track });
 			event.transceiver = new RTCRtpTransceiver({ receiver: event.receiver });
 			event.streams = [];
 
@@ -759,17 +836,27 @@ function onEvent(data) {
 				var stream = this.remoteStreams[data.streamId] || MediaStream.create(data.stream);
 				event.streams.push(stream);
 			}
+
+			// Store remote track
+			this.remoteTracks[track.id] = track;
+			track.addEventListener('ended', function () {
+				delete self.remoteTracks[track.id];
+			});
+
 			break;
 
 		case 'addstream':
-
 			// Append to the remote streams.
-			this.remoteStreams[data.streamId] = this.remoteStreams[data.streamId] || MediaStream.create(data.stream);
+			this.remoteStreams[data.streamId] =
+				this.remoteStreams[data.streamId] || MediaStream.create(data.stream);
 
 			event.stream = this.remoteStreams[data.streamId];
 
 			// Emit "connected" on the stream if ICE connected.
-			if (this.iceConnectionState === 'connected' || this.iceConnectionState === 'completed') {
+			if (
+				this.iceConnectionState === 'connected' ||
+				this.iceConnectionState === 'completed'
+			) {
 				event.stream.emitConnected();
 			}
 			break;

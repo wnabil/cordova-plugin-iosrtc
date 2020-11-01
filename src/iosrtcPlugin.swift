@@ -119,8 +119,10 @@ class iosrtcPlugin : CDVPlugin {
 				result?.setKeepCallbackAs(true);
 				self.emit(command.callbackId, result: result!)
 			},
-			eventListenerForAddStream: self.addMediaStream,
-			eventListenerForRemoveStream: self.deleteMediaStream
+			eventListenerForAddStream: self.saveMediaStream,
+			eventListenerForRemoveStream: self.deleteMediaStream,
+			eventListenerForAddTrack: self.saveMediaStreamTrack,
+			eventListenerForRemoveTrack: self.deleteMediaStreamTrack
 		)
 
 		// Store the pluginRTCPeerConnection into the dictionary.
@@ -385,18 +387,11 @@ class iosrtcPlugin : CDVPlugin {
 	@objc(RTCPeerConnection_removeTrack:) func RTCPeerConnection_removeTrack(_ command: CDVInvokedUrlCommand) {
 		let pcId = command.argument(at: 0) as! Int
 		let trackId = command.argument(at: 1) as! String
-		let streamId = command.argument(at: 2) as! String
 		let pluginRTCPeerConnection = self.pluginRTCPeerConnections[pcId]
-		let pluginMediaStream = self.pluginMediaStreams[streamId]
 		let pluginMediaStreamTrack = self.pluginMediaStreamTracks[trackId]
 
 		if pluginRTCPeerConnection == nil {
 			NSLog("iosrtcPlugin#RTCPeerConnection_removeTrack() | ERROR: pluginRTCPeerConnection with pcId=%@ does not exist", String(pcId))
-			return;
-		}
-
-		if pluginMediaStream == nil {
-			NSLog("iosrtcPlugin#RTCPeerConnection_removeTrack() | ERROR: pluginMediaStream with id=%@ does not exist", String(streamId))
 			return;
 		}
 
@@ -408,7 +403,7 @@ class iosrtcPlugin : CDVPlugin {
 		self.queue.async { [weak pluginRTCPeerConnection, weak pluginMediaStreamTrack] in
 			pluginRTCPeerConnection?.removeTrack(pluginMediaStreamTrack!)
 			// TODO remove only if not used by other stream
-			self.deleteMediaStreamTrack(trackId)
+			// self.deleteMediaStreamTrack(pluginMediaStreamTrack!)
 		}
 	}
 
@@ -698,7 +693,7 @@ class iosrtcPlugin : CDVPlugin {
 
 		if self.pluginMediaStreams[streamId] == nil {
 			let rtcMediaStream : RTCMediaStream = self.rtcPeerConnectionFactory.mediaStream(withStreamId: streamId)
-			let pluginMediaStream = PluginMediaStream(rtcMediaStream: rtcMediaStream)
+			let pluginMediaStream = PluginMediaStream(rtcMediaStream: rtcMediaStream, streamId: streamId)
 			pluginMediaStream.run()
 
 			self.saveMediaStream(pluginMediaStream)
@@ -802,6 +797,27 @@ class iosrtcPlugin : CDVPlugin {
 		self.pluginMediaStreams[id] = nil
 	}
 
+	@objc(MediaStreamTrack_clone:) func MediaStreamTrack_clone(_ command: CDVInvokedUrlCommand) {
+		NSLog("iosrtcPlugin#MediaStreamTrack_clone()")
+
+		let existingTrackId = command.argument(at: 0) as! String
+		let newTrackId = command.argument(at: 1) as! String
+		let pluginMediaStreamTrack = self.pluginMediaStreamTracks[existingTrackId]
+
+		if pluginMediaStreamTrack == nil {
+			NSLog("iosrtcPlugin#MediaStreamTrack_clone() | ERROR: pluginMediaStreamTrack with id=%@ does not exist", String(existingTrackId))
+			return;
+		}
+
+		if self.pluginMediaStreams[newTrackId] == nil {
+			let rtcMediaStreamTrack = self.pluginMediaStreamTracks[existingTrackId]!.rtcMediaStreamTrack;
+			let newPluginMediaStreamTrack = PluginMediaStreamTrack(rtcMediaStreamTrack: rtcMediaStreamTrack, trackId: newTrackId)
+
+			self.saveMediaStreamTrack(newPluginMediaStreamTrack)
+		} else {
+			NSLog("iosrtcPlugin#MediaStreamTrack_clone() | ERROR: pluginMediaStreamTrack with id=%@ already exist", String(newTrackId))
+		}
+	}
 
 	@objc(MediaStreamTrack_setListener:) func MediaStreamTrack_setListener(_ command: CDVInvokedUrlCommand) {
 		NSLog("iosrtcPlugin#MediaStreamTrack_setListener()")
@@ -829,7 +845,7 @@ class iosrtcPlugin : CDVPlugin {
 				},
 				eventListenerForEnded: { () -> Void in
 					// Remove the track from the container.
-					self.pluginMediaStreamTracks[pluginMediaStreamTrack!.id] = nil
+					self.deleteMediaStreamTrack(pluginMediaStreamTrack!);
 				}
 			)
 		}
@@ -1145,20 +1161,6 @@ class iosrtcPlugin : CDVPlugin {
 		}
 	}
 
-	fileprivate func addMediaStream(_ pluginMediaStream: PluginMediaStream) {
-		// Create Handled by MediaStream_init
-
-		if self.pluginMediaStreams[pluginMediaStream.id] == nil {
-			self.saveMediaStream(pluginMediaStream)
-		} else {
-			NSLog("iosrtcPlugin#addMediaStream() | WARN: pluginMediaStream with id=%@ already exist", String(pluginMediaStream.id))
-		}
-	}
-
-	fileprivate func removeMediaStream(_ id: String) {
-		// GC Handled by MediaStream_release
-	}
-
 	fileprivate func saveMediaStream(_ pluginMediaStream: PluginMediaStream) {
 		if self.pluginMediaStreams[pluginMediaStream.id] == nil {
 			self.pluginMediaStreams[pluginMediaStream.id] = pluginMediaStream
@@ -1177,8 +1179,13 @@ class iosrtcPlugin : CDVPlugin {
 		}
 	}
 
-	fileprivate func deleteMediaStream(_ id: String) {
-		self.pluginMediaStreams[id] = nil
+	fileprivate func deleteMediaStream(_ pluginMediaStream: PluginMediaStream) {
+		if (self.pluginMediaStreams[pluginMediaStream.id] != nil) {
+			self.pluginMediaStreams[pluginMediaStream.id] = nil
+			
+			// deinit should call stop by itself
+			//pluginMediaStream.stop();
+		}
 	}
 
 	fileprivate func saveMediaStreamTrack(_ pluginMediaStreamTrack: PluginMediaStreamTrack) {
@@ -1187,8 +1194,13 @@ class iosrtcPlugin : CDVPlugin {
 		}
 	}
 
-	fileprivate func deleteMediaStreamTrack(_ id: String) {
-		self.pluginMediaStreamTracks[id] = nil
+	fileprivate func deleteMediaStreamTrack(_ pluginMediaStreamTrack: PluginMediaStreamTrack) {
+		if (self.pluginMediaStreamTracks[pluginMediaStreamTrack.id] != nil) {
+			self.pluginMediaStreamTracks[pluginMediaStreamTrack.id] = nil
+			
+			// deinit should call stop by itself
+			//pluginMediaStreamTrack.stop();
+		}
 	}
 
 	fileprivate func cleanup() {
@@ -1210,21 +1222,20 @@ class iosrtcPlugin : CDVPlugin {
 			// Store its PluginMediaStreamTracks' into the dictionary.
 			for (trackId, pluginMediaStreamTrack) in pluginMediaStream.audioTracks {
 				pluginMediaStream.removeTrack(pluginMediaStreamTrack);
-				deleteMediaStreamTrack(trackId);
+				deleteMediaStreamTrack(pluginMediaStreamTrack);
 			}
 
 			for (trackId, pluginMediaStreamTrack) in pluginMediaStream.videoTracks {
 				pluginMediaStream.removeTrack(pluginMediaStreamTrack);
-				deleteMediaStreamTrack(trackId);
+				deleteMediaStreamTrack(pluginMediaStreamTrack);
 			}
 
-			deleteMediaStream(streamId);
+			deleteMediaStream(pluginMediaStream);
 		}
 
 		// Close All MediaStreamTracks without MediaStream
 		for (trackId, pluginMediaStreamTrack) in self.pluginMediaStreamTracks {
-			pluginMediaStreamTrack.stop()
-			deleteMediaStreamTrack(trackId);
+			deleteMediaStreamTrack(pluginMediaStreamTrack);
 		}
 	}
 }
