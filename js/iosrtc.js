@@ -10,28 +10,34 @@ var // Dictionary of MediaStreamRenderers.
 	// - key: MediaStream blobId.
 	// - value: MediaStream.
 	mediaStreams = {},
-	/**
-	 * Dependencies.
-	 */
-	debug = require('debug')('iosrtc'),
-	exec = require('cordova/exec'),
-	domready = require('domready'),
-	getUserMedia = require('./getUserMedia'),
-	enumerateDevices = require('./enumerateDevices'),
-	RTCPeerConnection = require('./RTCPeerConnection'),
-	RTCSessionDescription = require('./RTCSessionDescription'),
-	RTCIceCandidate = require('./RTCIceCandidate'),
-	MediaDevices = require('./MediaDevices'),
-	MediaStream = require('./MediaStream'),
-	MediaStreamTrack = require('./MediaStreamTrack'),
-	videoElementsHandler = require('./videoElementsHandler');
+
+
+/**
+ * Dependencies.
+ */
+
+debug = require('debug')('iosrtc'),
+exec = require('cordova/exec'),
+domready = require('domready'),
+getUserMedia = require('./getUserMedia'),
+getDisplayMedia = require('./getDisplayMedia'),
+enumerateDevices = require('./enumerateDevices'),
+RTCPeerConnection = require('./RTCPeerConnection'),
+RTCSessionDescription = require('./RTCSessionDescription'),
+RTCIceCandidate = require('./RTCIceCandidate'),
+MediaDevices = require('./MediaDevices'),
+MediaStream = require('./MediaStream'),
+MediaStreamTrack = require('./MediaStreamTrack'),
+videoElementsHandler = require('./videoElementsHandler');
 
 /**
  * Expose the iosrtc object.
  */
 module.exports = {
 	// Expose WebRTC classes and functions.
+	
 	getUserMedia: getUserMedia,
+	getDisplayMedia:       getDisplayMedia,
 	enumerateDevices: enumerateDevices,
 	getMediaDevices: enumerateDevices, // TMP
 	RTCPeerConnection: RTCPeerConnection,
@@ -193,6 +199,8 @@ function registerGlobals(doNotRestoreCallbacksSupport) {
 		restoreCallbacksSupport();
 	}
 
+	navigator.getDisplayMedia = getDisplayMedia;
+	navigator.mediaDevices.getDisplayMedia = getDisplayMedia;
 	navigator.getUserMedia = getUserMedia;
 	navigator.webkitGetUserMedia = getUserMedia;
 	navigator.mediaDevices.getUserMedia = getUserMedia;
